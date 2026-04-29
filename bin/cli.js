@@ -23,7 +23,10 @@ Options:
   --report <path>       Write JSON warnings to this path (default: ./heroui-migrate-report.json)
   --no-report           Don't write a JSON report.
   --no-tailwind         Don't patch tailwind.config.{js,ts}.
-  --no-css-check        Don't inspect globals.css.
+  --no-css-check        Don't inspect globals.css / app.css.
+  --no-package          Don't patch package.json.
+  --target-version <v>  HeroUI v3 version specifier (default: ^3.0.3)
+  --keep-framer-motion  Don't drop framer-motion even if unreferenced.
   --jscodeshift <bin>   Path to jscodeshift binary (default: bundled).
   -h, --help            Show this help.
 
@@ -78,6 +81,9 @@ function parseArgs(argv) {
     if (a === '--dry') { args.dry = true; continue; }
     if (a === '--no-tailwind') { args.noTailwind = true; continue; }
     if (a === '--no-css-check') { args.noCssCheck = true; continue; }
+    if (a === '--no-package') { args.noPackage = true; continue; }
+    if (a === '--keep-framer-motion') { args.keepFramerMotion = true; continue; }
+    if (a === '--target-version') { args.targetVersion = argv[++i]; continue; }
     if (a === '--no-report') { args.noReport = true; continue; }
     if (a === '--extensions') { args.extensions = argv[++i]; continue; }
     if (a === '--v3-aliases') { args.v3Aliases = argv[++i]; continue; }
@@ -190,19 +196,46 @@ function main() {
     }
   }
 
-  // Step 3: globals.css inspection
+  // Step 3: globals.css inspection — covers Next.js, Vite, Remix/React-Router,
+  // CRA, Astro, plus any *.css with `@import "tailwindcss"`.
   if (!args.noCssCheck) {
-    const candidates = [
+    const fastGlob = require('fast-glob');
+    const candidatesByConvention = [
       'src/app/globals.css',
       'app/globals.css',
+      'app/app.css',
+      'app/tailwind.css',
       'src/styles/globals.css',
       'styles/globals.css',
       'src/index.css',
       'src/main.css',
+      'src/app.css',
+      'src/styles.css',
     ];
-    for (const rel of candidates) {
+    const found = new Set();
+    for (const rel of candidatesByConvention) {
       const p = path.resolve(process.cwd(), rel);
-      if (!fs.existsSync(p)) continue;
+      if (fs.existsSync(p)) found.add(p);
+    }
+    // Plus any CSS file that already imports tailwindcss — that's the
+    // file v3 needs the styles import added to.
+    try {
+      const cssFiles = fastGlob.sync(['**/*.css'], {
+        cwd: process.cwd(),
+        ignore: ['node_modules/**', 'dist/**', 'build/**', '.next/**', '.cache/**'],
+        onlyFiles: true,
+        absolute: true,
+      });
+      for (const f of cssFiles) {
+        try {
+          const c = fs.readFileSync(f, 'utf8');
+          if (/@import\s+["']tailwindcss["']/.test(c)) found.add(f);
+        } catch (_) { /* ignore */ }
+      }
+    } catch (_) { /* ignore */ }
+
+    for (const p of found) {
+      const rel = path.relative(process.cwd(), p);
       try {
         const { inspectGlobalCss } = require('../lib/tailwind-config');
         const r = inspectGlobalCss(p);
@@ -223,7 +256,37 @@ function main() {
     }
   }
 
-  // Step 4: report
+  // Step 4: package.json patching
+  if (!args.noPackage) {
+    try {
+      const { patchPackageJson } = require('../lib/package-json');
+      const r = patchPackageJson(process.cwd(), {
+        targetVersion: args.targetVersion,
+        dropFramerMotion: !args.keepFramerMotion,
+      });
+      if (r.changed) {
+        console.log(`✓ package.json: patched.`);
+        for (const s of r.summary) console.log(`    ${s}`);
+        console.log(`    Run \`npm install\` (or pnpm/yarn) to fetch the new versions.`);
+      } else if (r.summary.length) {
+        for (const s of r.summary) console.log(`· package.json: ${s}`);
+      } else {
+        console.log(`· package.json: nothing to do.`);
+      }
+      for (const s of r.summary) {
+        warnings.push({
+          file: path.join(process.cwd(), 'package.json'),
+          line: null,
+          ruleId: 'package-json',
+          message: s,
+        });
+      }
+    } catch (e) {
+      console.error(`! Failed to patch package.json: ${e.message}`);
+    }
+  }
+
+  // Step 5: JSON report
   if (!args.noReport) {
     const grouped = {};
     for (const w of warnings) {
