@@ -7,6 +7,7 @@
 const path = require('path');
 const fs = require('fs');
 const { spawnSync } = require('child_process');
+const { DEFAULT_IGNORE_GLOBS } = require('../lib/ignore');
 
 function help() {
   console.log(
@@ -134,9 +135,11 @@ function main() {
     '-t', transform,
     '--extensions', extensions,
     '--parser', 'tsx', // overridden per-file by the transform's `parser` export
-    '--ignore-pattern', 'node_modules/**',
     '--ignore-pattern', '**/*.d.ts',
   ];
+  for (const glob of DEFAULT_IGNORE_GLOBS) {
+    jsArgs.push('--ignore-pattern', glob);
+  }
   if (args.dry) jsArgs.push('--dry', '--print');
   if (args.v3Aliases) jsArgs.push('--v3-aliases=' + args.v3Aliases);
   jsArgs.push(...targets);
@@ -222,7 +225,7 @@ function main() {
     try {
       const cssFiles = fastGlob.sync(['**/*.css'], {
         cwd: process.cwd(),
-        ignore: ['node_modules/**', 'dist/**', 'build/**', '.next/**', '.cache/**'],
+        ignore: DEFAULT_IGNORE_GLOBS,
         onlyFiles: true,
         absolute: true,
       });
@@ -266,14 +269,7 @@ function main() {
       const { rewriteCssFile } = require('../lib/css');
       const cssFiles = fastGlob.sync(['**/*.{css,scss}'], {
         cwd: process.cwd(),
-        ignore: [
-          'node_modules/**',
-          'dist/**',
-          'build/**',
-          '.next/**',
-          '.cache/**',
-          '.tmp-fixture-out/**',
-        ],
+        ignore: DEFAULT_IGNORE_GLOBS,
         onlyFiles: true,
         absolute: true,
       });
