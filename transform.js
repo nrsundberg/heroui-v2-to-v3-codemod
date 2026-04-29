@@ -20,6 +20,7 @@ const { rewriteJSXElements } = require('./lib/components');
 const { rewriteJSXAttributes } = require('./lib/props');
 const { rewriteHookUsages } = require('./lib/hooks');
 const { rewriteCallSites } = require('./lib/calls');
+const { applyStructuralRewrites } = require('./lib/structural');
 const { DEFAULT_V3_ALIASES } = require('./lib/mappings');
 
 function transformer(file, api, options) {
@@ -50,6 +51,13 @@ function transformer(file, api, options) {
   rewriteHookUsages(j, root, ctx, importInfo);
   rewriteJSXAttributes(j, root, ctx, importInfo);
   rewriteJSXElements(j, root, ctx, importInfo);
+
+  // Pass 2a: structural auto-restructures for Tooltip/Badge/Avatar/Modal/
+  //          Drawer/Tabs/Input. Runs AFTER element renames (so we match
+  //          against v3 names) and BEFORE finalizeImports (so newly-introduced
+  //          specifiers like TextField/Label/Description/FieldError/InputGroup
+  //          can be wired up).
+  applyStructuralRewrites(j, root, ctx, importInfo);
 
   // Pass 2b: rewrite removed-named-export call sites (e.g. getKeyValue).
   //          Runs after JSX rewriting but before finalizeImports drops the
