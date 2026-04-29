@@ -1,0 +1,36 @@
+{
+  "name": "heroui-v2-to-v3-codemod",
+  "version": "0.1.0",
+  "description": "Deterministic codemod that migrates a React/Next.js UI directory from HeroUI v2 to HeroUI v3. No LLM at runtime.",
+  "bin": {
+    "heroui-v2-to-v3": "./bin/cli.js"
+  },
+  "main": "./transform.js",
+  "files": [
+    "bin",
+    "lib",
+    "transform.js",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node __tests__/run.js",
+    "lint": "node -e \"require('./transform.js')\""
+  },
+  "dependencies": {
+    "jscodeshift": "^17.1.1",
+    "fast-glob": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "heroui",
+    "nextui",
+    "codemod",
+    "jscodeshift",
+    "migration",
+    "v2",
+    "v3"
+  ],
+  "license": "MIT"
+}
