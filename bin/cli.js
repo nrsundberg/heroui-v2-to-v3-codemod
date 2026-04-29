@@ -238,9 +238,11 @@ function main() {
       const rel = path.relative(process.cwd(), p);
       try {
         const { inspectGlobalCss } = require('../lib/tailwind-config');
-        const r = inspectGlobalCss(p);
-        if (r.ok) {
-          console.log(`✓ ${rel}: v3 @imports already present.`);
+        const r = inspectGlobalCss(p, { apply: !args.dry });
+        if (r.changed) {
+          console.log(`✓ ${rel}: inserted @import "@heroui/styles" after @import "tailwindcss".`);
+        } else if (r.ok) {
+          console.log(`· ${rel}: v3 @imports already present.`);
         } else {
           for (const w of r.warnings) {
             warnings.push({
@@ -249,7 +251,7 @@ function main() {
               ruleId: 'globals-css',
               message: w,
             });
-            console.log(`! ${rel}: missing v3 @imports — see report.`);
+            console.log(`! ${rel}: ${w.split('\n')[0]}`);
           }
         }
       } catch (e) { /* swallow */ }
