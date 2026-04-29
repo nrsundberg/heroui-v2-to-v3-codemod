@@ -258,6 +258,52 @@ function main() {
     }
   }
 
+  // Step 3b: raw CSS / SCSS token rewriting (vars, @apply, @import).
+  // Skipped under the same flag as the inspector (--no-css-check).
+  if (!args.noCssCheck) {
+    try {
+      const fastGlob = require('fast-glob');
+      const { rewriteCssFile } = require('../lib/css');
+      const cssFiles = fastGlob.sync(['**/*.{css,scss}'], {
+        cwd: process.cwd(),
+        ignore: [
+          'node_modules/**',
+          'dist/**',
+          'build/**',
+          '.next/**',
+          '.cache/**',
+          '.tmp-fixture-out/**',
+        ],
+        onlyFiles: true,
+        absolute: true,
+      });
+      for (const f of cssFiles) {
+        const rel = path.relative(process.cwd(), f);
+        try {
+          const r = rewriteCssFile(f, { apply: !args.dry });
+          for (const w of r.warnings) {
+            warnings.push({
+              file: f,
+              line: w.line,
+              ruleId: w.ruleId,
+              message: w.message,
+            });
+          }
+          if (r.changed) {
+            const total = (r.counts.vars || 0) + (r.counts.classes || 0);
+            console.log(
+              `✓ ${rel}: rewrote ${total} tokens (${r.counts.vars} vars, ${r.counts.classes} classes).`
+            );
+          }
+        } catch (e) {
+          console.error(`! Failed to rewrite ${rel}: ${e.message}`);
+        }
+      }
+    } catch (e) {
+      console.error(`! CSS rewriter failed to start: ${e.message}`);
+    }
+  }
+
   // Step 4: package.json patching
   if (!args.noPackage) {
     try {

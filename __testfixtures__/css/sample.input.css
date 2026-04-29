@@ -1,0 +1,24 @@
+@import "tailwindcss";
+@import "@heroui/theme";
+
+:root {
+  --primary: hsl(220, 90%, 50%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --divider: hsl(220, 10%, 90%);
+  --panel: hsl(0, 0%, 100%);
+  --surface-1: hsl(220, 5%, 95%);
+  --surface-3: hsl(220, 5%, 75%);
+  --skeleton-default-animation-type: pulse;
+  --secondary: hsl(280, 70%, 50%);
+}
+
+.btn {
+  @apply bg-primary text-primary-100 rounded-medium shadow-small;
+  background: var(--primary);
+  border-color: var(--divider);
+}
+
+.surface-stack {
+  @apply bg-content1 text-content2;
+  background: var(--panel);
+}
