@@ -354,10 +354,51 @@ function main() {
     fs.writeFileSync(reportPath, JSON.stringify(reportObj, null, 2));
     console.log(`\n→ Report: ${path.relative(process.cwd(), reportPath)}`);
     console.log(`  ${totalWarnings} warning(s) across ${totalFiles} file(s).`);
-    console.log(`  Grep for 'HEROUI-MIGRATE' in your tree to find every site.`);
+    if (totalWarnings > 0) {
+      console.log(`  To list every site needing manual review:`);
+      console.log(`    ${pickGrepCommand(args.paths)}`);
+    }
   }
 
   process.exit(proc.status || 0);
+}
+
+// Pick a grep command available on this system, paired with the user's
+// target paths (when safe to inline them). Prefer ripgrep (fastest,
+// auto-skips .gitignored dirs); fall back to `git grep` inside repos when
+// every target lives under the current git repo; last resort is plain grep
+// with an explicit skip-list.
+function pickGrepCommand(userPaths) {
+  const has = (bin) => {
+    const r = spawnSync(process.platform === 'win32' ? 'where' : 'which', [bin], { stdio: 'ignore' });
+    return r.status === 0;
+  };
+
+  // Sanitize each user-supplied path for shell use. We only quote when
+  // necessary (whitespace or shell metachars) so the printed line stays
+  // copy-pasteable.
+  const quote = (p) => (/[\s"'$`\\&|;<>(){}[\]*?]/.test(p) ? `'${p.replace(/'/g, `'\\''`)}'` : p);
+  const targets = (userPaths || []).map(quote);
+  const targetArg = targets.length ? ' ' + targets.join(' ') : '';
+
+  if (has('rg')) return 'rg HEROUI-MIGRATE' + targetArg;
+
+  // git grep only works when every target is inside the current git repo.
+  const cwd = process.cwd();
+  if (
+    fs.existsSync(path.join(cwd, '.git')) &&
+    has('git') &&
+    (userPaths || []).every((p) => {
+      const abs = path.resolve(cwd, p);
+      const rel = path.relative(cwd, abs);
+      return rel && !rel.startsWith('..') && !path.isAbsolute(rel);
+    })
+  ) {
+    return 'git grep -n HEROUI-MIGRATE --' + targetArg;
+  }
+
+  const grepBase = 'grep -RIn --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist --exclude-dir=build HEROUI-MIGRATE';
+  return grepBase + (targetArg || ' .');
 }
 
 function countBy(arr, keyFn) {
