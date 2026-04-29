@@ -3,3 +3,4 @@ node_modules/
 .DS_Store
 heroui-migrate-report.json
 .tmp-fixture-out/
+.claude/
