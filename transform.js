@@ -19,6 +19,7 @@ const { scanImports, finalizeImports } = require('./lib/imports');
 const { rewriteJSXElements } = require('./lib/components');
 const { rewriteJSXAttributes } = require('./lib/props');
 const { rewriteHookUsages } = require('./lib/hooks');
+const { rewriteCallSites } = require('./lib/calls');
 const { DEFAULT_V3_ALIASES } = require('./lib/mappings');
 
 function transformer(file, api, options) {
@@ -49,6 +50,11 @@ function transformer(file, api, options) {
   rewriteHookUsages(j, root, ctx, importInfo);
   rewriteJSXAttributes(j, root, ctx, importInfo);
   rewriteJSXElements(j, root, ctx, importInfo);
+
+  // Pass 2b: rewrite removed-named-export call sites (e.g. getKeyValue).
+  //          Runs after JSX rewriting but before finalizeImports drops the
+  //          matching import specifier.
+  rewriteCallSites(j, root, ctx, importInfo);
 
   // Pass 3: rewrite import SPECIFIERS to match the v3 names produced above,
   //         drop unused/renamed specifiers, dedupe, and consolidate multiple
