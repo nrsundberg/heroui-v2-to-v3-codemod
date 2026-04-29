@@ -53,7 +53,7 @@ function transformer(file, api, options) {
   // Pass 3: rewrite import SPECIFIERS to match the v3 names produced above,
   //         drop unused/renamed specifiers, dedupe, and consolidate multiple
   //         @heroui/react imports.
-  finalizeImports(j, root, ctx);
+  finalizeImports(j, root, ctx, importInfo);
 
   // Surface warnings via stderr — the CLI tail-collects them.
   if (ctx.warnings.length) {
