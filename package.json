@@ -32,5 +32,13 @@
     "v2",
     "v3"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nrsundberg/heroui-v2-to-v3-codemod.git"
+  },
+  "homepage": "https://github.com/nrsundberg/heroui-v2-to-v3-codemod#readme",
+  "bugs": {
+    "url": "https://github.com/nrsundberg/heroui-v2-to-v3-codemod/issues"
+  },
   "license": "MIT"
 }
