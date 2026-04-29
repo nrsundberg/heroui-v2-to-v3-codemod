@@ -59,6 +59,18 @@ function run() {
     console.log('\nByRule:');
     console.log(JSON.stringify(report.byRule, null, 2));
   }
+  // After JS fixtures, also run the CSS-fixture pass (if present).
+  const cssRunner = path.join(__dirname, 'run-css.js');
+  if (fs.existsSync(cssRunner)) {
+    console.log('\n================ CSS FIXTURES ================\n');
+    const cssProc = spawnSync(process.execPath, [cssRunner], {
+      cwd: ROOT,
+      stdio: 'inherit',
+    });
+    if (cssProc.status && !proc.status) {
+      process.exit(cssProc.status);
+    }
+  }
   process.exit(proc.status || 0);
 }
 
